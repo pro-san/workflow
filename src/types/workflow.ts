@@ -129,6 +129,14 @@ export interface CanvasLayer {
   opacity: number;
 }
 
+export interface StickyCommentReply {
+  id: string;
+  author: string;
+  authorAvatar?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface StickyComment {
   id: string;
   author: string;
@@ -142,6 +150,7 @@ export interface StickyComment {
   targetNodeId?: string;
   resolved: boolean;
   createdAt: string;
+  replies?: StickyCommentReply[];
 }
 
 export interface DiagramProject {

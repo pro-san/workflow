@@ -197,7 +197,7 @@ export default function App() {
       id: `comment_${Date.now()}`,
       author: 'Current User',
       authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-      content: 'New feedback note...',
+      content: 'New feedback note... @Sarah Jenkins',
       color: '#fef08a',
       x: targetNode ? targetNode.x + targetNode.width + 30 : 250,
       y: targetNode ? targetNode.y : 200,

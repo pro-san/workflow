@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { StickyComment } from '../../types/workflow';
+import { MentionTextarea } from '../common/MentionTextarea';
+import { MentionText } from '../common/MentionText';
 import { Check, Trash2, Edit2, MessageSquare, Link, Palette } from 'lucide-react';
 
 interface StickyCommentNoteProps {
@@ -157,32 +159,43 @@ export const StickyCommentNote: React.FC<StickyCommentNoteProps> = ({
         {/* Note Body Text Content */}
         <div className="flex-1 my-1 overflow-auto text-xs leading-snug">
           {isEditing ? (
-            <textarea
-              autoFocus
+            <MentionTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onBlur={handleSaveText}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSaveText();
-                }
+              onChange={setContent}
+              onSave={handleSaveText}
+              onCancel={() => {
+                setContent(comment.content);
+                setIsEditing(false);
               }}
-              className="w-full h-full bg-transparent border-none outline-none resize-none text-xs font-sans text-inherit p-0"
+              rows={2}
+              autoFocus
+              lightMode
             />
           ) : (
             <div
               onDoubleClick={() => setIsEditing(true)}
               className="w-full h-full cursor-text whitespace-pre-wrap break-words font-sans"
             >
-              {comment.content || <span className="italic opacity-50">Empty note...</span>}
+              {comment.content ? (
+                <MentionText content={comment.content} lightMode />
+              ) : (
+                <span className="italic opacity-50">Empty note...</span>
+              )}
             </div>
           )}
         </div>
 
         {/* Bottom Actions Bar */}
-        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-black/10 opacity-70">
-          <span>{comment.resolved ? 'Resolved' : 'Active'}</span>
+        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-black/10 opacity-75">
+          <div className="flex items-center space-x-1.5">
+            <span>{comment.resolved ? 'Resolved' : 'Active'}</span>
+            {comment.replies && comment.replies.length > 0 && (
+              <span className="flex items-center space-x-0.5 font-semibold text-slate-900 bg-black/10 px-1 py-0.5 rounded text-[9px]">
+                <MessageSquare className="w-2.5 h-2.5" />
+                <span>{comment.replies.length}</span>
+              </span>
+            )}
+          </div>
           {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}

@@ -41,6 +41,15 @@ export const PREBUILT_TEMPLATES: DiagramProject[] = [
         targetNodeId: 'node_3',
         resolved: false,
         createdAt: '10:42 AM',
+        replies: [
+          {
+            id: 'reply_1',
+            author: 'Alex Rivera',
+            authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+            content: '@Sarah Jenkins Verified the retry policy is set to 30s max backoff.',
+            createdAt: '10:50 AM',
+          }
+        ],
       },
       {
         id: 'comment_2',

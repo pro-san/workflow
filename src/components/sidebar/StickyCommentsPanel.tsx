@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { DiagramProject, StickyComment } from '../../types/workflow';
+import { DiagramProject, StickyComment, StickyCommentReply } from '../../types/workflow';
+import { MentionTextarea } from '../common/MentionTextarea';
+import { MentionText } from '../common/MentionText';
 import {
   MessageSquare,
   Plus,
@@ -14,6 +16,9 @@ import {
   Eye,
   EyeOff,
   X,
+  Reply,
+  CornerDownRight,
+  Send,
 } from 'lucide-react';
 
 interface StickyCommentsPanelProps {
@@ -43,6 +48,8 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   const filteredComments = comments.filter((c) => {
     if (showOnlyUnresolved && c.resolved) return false;
@@ -58,8 +65,17 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
       const matchesAuthor = c.author.toLowerCase().includes(q);
       const matchesNodeLabel = nodeLabel.toLowerCase().includes(q);
       const matchesNodeId = c.targetNodeId ? c.targetNodeId.toLowerCase().includes(q) : false;
+      const matchesReplies = c.replies?.some(
+        (r) => r.content.toLowerCase().includes(q) || r.author.toLowerCase().includes(q)
+      ) || false;
 
-      if (!matchesContent && !matchesAuthor && !matchesNodeLabel && !matchesNodeId) {
+      if (
+        !matchesContent &&
+        !matchesAuthor &&
+        !matchesNodeLabel &&
+        !matchesNodeId &&
+        !matchesReplies
+      ) {
         return false;
       }
     }
@@ -102,6 +118,45 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
 
   const handleColorChange = (id: string, color: string) => {
     onUpdateComments(comments.map((c) => (c.id === id ? { ...c, color } : c)));
+  };
+
+  const handleAddReply = (commentId: string) => {
+    if (!replyText.trim()) return;
+    const newReply: StickyCommentReply = {
+      id: `reply_${Date.now()}`,
+      author: 'Current User',
+      authorAvatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      content: replyText.trim(),
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    const updated = comments.map((c) => {
+      if (c.id === commentId) {
+        return {
+          ...c,
+          replies: [...(c.replies || []), newReply],
+        };
+      }
+      return c;
+    });
+
+    onUpdateComments(updated);
+    setReplyText('');
+    setReplyingCommentId(null);
+  };
+
+  const handleDeleteReply = (commentId: string, replyId: string) => {
+    const updated = comments.map((c) => {
+      if (c.id === commentId) {
+        return {
+          ...c,
+          replies: (c.replies || []).filter((r) => r.id !== replyId),
+        };
+      }
+      return c;
+    });
+    onUpdateComments(updated);
   };
 
   return (
@@ -317,59 +372,125 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
 
                 {/* Note Content */}
                 {editingCommentId === comment.id ? (
-                  <div className="space-y-2 mt-1">
-                    <textarea
+                  <div className="mt-1">
+                    <MentionTextarea
                       value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      className="w-full bg-slate-900 border border-amber-500/50 rounded p-2 text-xs text-slate-200 focus:outline-none resize-none"
+                      onChange={setEditingText}
+                      onSave={() => handleSaveEditing(comment.id)}
+                      onCancel={() => setEditingCommentId(null)}
                       rows={3}
                       autoFocus
                     />
-                    <div className="flex justify-end space-x-1.5">
-                      <button
-                        onClick={() => setEditingCommentId(null)}
-                        className="px-2 py-0.5 text-[11px] text-slate-400 hover:text-slate-200"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => handleSaveEditing(comment.id)}
-                        className="px-2.5 py-0.5 bg-amber-500 text-slate-950 rounded text-[11px] font-medium hover:bg-amber-400"
-                      >
-                        Save
-                      </button>
-                    </div>
                   </div>
                 ) : (
-                  <p
+                  <div
                     onClick={() => handleStartEditing(comment)}
                     className="text-xs text-slate-300 bg-slate-900/60 p-2 rounded border border-slate-800/80 cursor-pointer hover:border-slate-700 whitespace-pre-wrap leading-relaxed"
                   >
-                    {comment.content}
-                  </p>
+                    <MentionText content={comment.content} />
+                  </div>
                 )}
 
-                {/* Color Selector Bar */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px]">
-                  <span className="text-slate-500 flex items-center space-x-1">
-                    <Palette className="w-2.5 h-2.5" />
-                    <span>Color</span>
-                  </span>
-                  <div className="flex items-center space-x-1">
-                    {NOTE_COLORS.map((col) => (
-                      <button
-                        key={col.value}
-                        onClick={() => handleColorChange(comment.id, col.value)}
-                        className={`w-3.5 h-3.5 rounded-full border border-slate-700 transition-transform ${
-                          comment.color === col.value
-                            ? 'ring-2 ring-amber-400 scale-110'
-                            : 'hover:scale-110'
-                        }`}
-                        style={{ backgroundColor: col.value }}
-                      />
-                    ))}
+                {/* Nested Thread Replies */}
+                {comment.replies && comment.replies.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-medium text-amber-400/90">
+                      <div className="flex items-center space-x-1">
+                        <CornerDownRight className="w-3 h-3 text-amber-500" />
+                        <span>Thread ({comment.replies.length})</span>
+                      </div>
+                    </div>
+
+                    <div className="pl-2 border-l-2 border-amber-500/30 space-y-2">
+                      {comment.replies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          className="bg-slate-900/90 p-2 rounded border border-slate-800/90 space-y-1 relative group transition-all hover:border-slate-700"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center space-x-1.5 overflow-hidden">
+                              {reply.authorAvatar ? (
+                                <img
+                                  src={reply.authorAvatar}
+                                  alt={reply.author}
+                                  className="w-3.5 h-3.5 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-3.5 h-3.5 rounded-full bg-amber-500/20 text-amber-400 text-[9px] flex items-center justify-center font-bold flex-shrink-0">
+                                  {reply.author.charAt(0)}
+                                </div>
+                              )}
+                              <span className="text-[11px] font-semibold text-slate-200 truncate">
+                                {reply.author}
+                              </span>
+                              <span className="text-[9px] text-slate-500 flex-shrink-0">
+                                {reply.createdAt}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteReply(comment.id, reply.id)}
+                              className="text-slate-600 hover:text-red-400 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Delete reply"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <div className="text-[11px] text-slate-300 leading-snug pl-0.5">
+                            <MentionText content={reply.content} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Reply Form or Footer Control Bar */}
+                {replyingCommentId === comment.id ? (
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80">
+                    <MentionTextarea
+                      value={replyText}
+                      onChange={setReplyText}
+                      onSave={() => handleAddReply(comment.id)}
+                      onCancel={() => {
+                        setReplyingCommentId(null);
+                        setReplyText('');
+                      }}
+                      placeholder="Write a reply... Type @ to tag"
+                      rows={2}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800/60 text-[10px]">
+                    <button
+                      onClick={() => {
+                        setReplyingCommentId(comment.id);
+                        setReplyText('');
+                      }}
+                      className="text-slate-400 hover:text-amber-300 flex items-center space-x-1 transition-colors font-medium px-1.5 py-0.5 rounded hover:bg-slate-800/80"
+                    >
+                      <Reply className="w-3 h-3 text-amber-400" />
+                      <span>Reply</span>
+                    </button>
+
+                    {/* Color Swatch Bar */}
+                    <div className="flex items-center space-x-1">
+                      {NOTE_COLORS.map((col) => (
+                        <button
+                          key={col.value}
+                          onClick={() => handleColorChange(comment.id, col.value)}
+                          className={`w-3 h-3 rounded-full border border-slate-700 transition-transform ${
+                            comment.color === col.value
+                              ? 'ring-2 ring-amber-400 scale-110'
+                              : 'hover:scale-110'
+                          }`}
+                          style={{ backgroundColor: col.value }}
+                          title={`Set color: ${col.name}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
