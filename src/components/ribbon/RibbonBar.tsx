@@ -125,7 +125,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
                 {project.type}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 px-1">PRO WORKFLOW Studio v3.2</p>
+            <p className="text-[11px] text-slate-400 px-1">Enterprise Workflow Studio v3.2</p>
           </div>
         </div>
 

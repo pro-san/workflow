@@ -38,9 +38,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div>
             <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs tracking-wider uppercase mb-1">
               <Sparkles className="w-4 h-4" />
-              <span>PRO WORKFLOW Suite</span>
+              <span>Enterprise Workflow Suite</span>
             </div>
-            <h1 className="text-2xl font-bold text-white">PRO WORKFLOW Dashboard</h1>
+            <h1 className="text-2xl font-bold text-white">Workflow Designer Dashboard</h1>
             <p className="text-xs text-slate-400 mt-1">
               Design, model, and automate enterprise process diagrams with AI Assistance
             </p>
