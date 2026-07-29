@@ -59,6 +59,15 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
 
   const activeCount = comments.filter((c) => !c.resolved).length;
   const resolvedCount = comments.filter((c) => c.resolved).length;
+  const unresolvedInViewCount = filteredComments.filter((c) => !c.resolved).length;
+
+  const handleResolveAll = () => {
+    const displayedIds = new Set(filteredComments.map((c) => c.id));
+    const updated = comments.map((c) =>
+      displayedIds.has(c.id) ? { ...c, resolved: true } : c
+    );
+    onUpdateComments(updated);
+  };
 
   const handleToggleResolve = (id: string) => {
     const updated = comments.map((c) =>
@@ -92,21 +101,36 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
   return (
     <div className="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full text-slate-200">
       {/* Panel Header */}
-      <div className="p-3.5 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <MessageSquare className="w-4 h-4 text-amber-400" />
-          <h3 className="font-semibold text-sm text-slate-100">Sticky Notes</h3>
-          <span className="bg-slate-800 text-slate-400 text-xs px-2 py-0.5 rounded-full font-mono">
+      <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center space-x-1.5 overflow-hidden">
+          <MessageSquare className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <h3 className="font-semibold text-sm text-slate-100 truncate">Notes</h3>
+          <span className="bg-slate-800 text-slate-400 text-xs px-1.5 py-0.5 rounded-full font-mono flex-shrink-0">
             {comments.length}
           </span>
         </div>
-        <button
-          onClick={() => onAddStickyComment()}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-2.5 py-1 rounded-md text-xs font-semibold flex items-center space-x-1 transition-colors shadow-sm"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Note</span>
-        </button>
+        <div className="flex items-center space-x-1.5">
+          <button
+            onClick={handleResolveAll}
+            disabled={unresolvedInViewCount === 0}
+            className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500/10 disabled:cursor-not-allowed px-2 py-1 rounded-md text-[11px] font-medium flex items-center space-x-1 transition-colors shadow-sm"
+            title={
+              unresolvedInViewCount > 0
+                ? `Resolve all ${unresolvedInViewCount} currently displayed active notes`
+                : 'No active notes to resolve in view'
+            }
+          >
+            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+            <span>Resolve All</span>
+          </button>
+          <button
+            onClick={() => onAddStickyComment()}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-2 py-1 rounded-md text-[11px] font-semibold flex items-center space-x-1 transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New</span>
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
