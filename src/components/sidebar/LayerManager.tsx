@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Layers, Sliders } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Layers, Sliders, Copy } from 'lucide-react';
 import { CanvasLayer } from '../../types/workflow';
 
 interface LayerManagerProps {
@@ -10,6 +10,7 @@ interface LayerManagerProps {
   onToggleVisibility: (id: string) => void;
   onToggleLock: (id: string) => void;
   onUpdateOpacity: (id: string, opacity: number) => void;
+  onDuplicateLayer: (id: string) => void;
   onDeleteLayer: (id: string) => void;
 }
 
@@ -21,6 +22,7 @@ export const LayerManager: React.FC<LayerManagerProps> = ({
   onToggleVisibility,
   onToggleLock,
   onUpdateOpacity,
+  onDuplicateLayer,
   onDeleteLayer,
 }) => {
   return (
@@ -89,6 +91,13 @@ export const LayerManager: React.FC<LayerManagerProps> = ({
                     ) : (
                       <Unlock className="w-3.5 h-3.5 text-slate-500" />
                     )}
+                  </button>
+                  <button
+                    onClick={() => onDuplicateLayer(layer.id)}
+                    className="p-1 hover:text-indigo-300 text-slate-400 transition-colors"
+                    title="Duplicate Layer and Shapes"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
                   </button>
                   {layers.length > 1 && (
                     <button

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   ActiveTool,
   AutoLayoutAlgorithm,
+  CanvasConnector,
   CanvasLayer,
   CanvasNode,
   DiagramProject,
@@ -181,6 +182,64 @@ export default function App() {
     }));
     setSelectedNodeIds([]);
     setSelectedConnectorIds([]);
+    recordHistory();
+  };
+
+  // Handle Duplicate Layer
+  const handleDuplicateLayer = (targetLayerId: string) => {
+    const targetLayer = project.layers.find((l) => l.id === targetLayerId);
+    if (!targetLayer) return;
+
+    const newLayerId = `layer_${Date.now()}`;
+    const newLayer: CanvasLayer = {
+      ...targetLayer,
+      id: newLayerId,
+      name: `${targetLayer.name} (Copy)`,
+    };
+
+    // Find all nodes associated with this layer and duplicate them
+    const nodesOnLayer = project.nodes.filter((n) => n.layerId === targetLayerId);
+    const nodeIdMap = new Map<string, string>();
+
+    const duplicatedNodes: CanvasNode[] = nodesOnLayer.map((node, index) => {
+      const newNodeId = `node_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 6)}`;
+      nodeIdMap.set(node.id, newNodeId);
+      return {
+        ...node,
+        id: newNodeId,
+        layerId: newLayerId,
+        x: node.x + 30,
+        y: node.y + 30,
+        label: node.label ? `${node.label} (Copy)` : node.label,
+      };
+    });
+
+    // Duplicate any connectors between nodes on this layer
+    const duplicatedConnectors: CanvasConnector[] = [];
+    project.connectors.forEach((conn) => {
+      const newFrom = nodeIdMap.get(conn.fromNodeId);
+      const newTo = nodeIdMap.get(conn.toNodeId);
+      if (newFrom && newTo) {
+        duplicatedConnectors.push({
+          ...conn,
+          id: `conn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          fromNodeId: newFrom,
+          toNodeId: newTo,
+        });
+      }
+    });
+
+    setProject((prev) => ({
+      ...prev,
+      layers: [...prev.layers, newLayer],
+      nodes: [...prev.nodes, ...duplicatedNodes],
+      connectors: [...prev.connectors, ...duplicatedConnectors],
+    }));
+
+    setActiveLayerId(newLayerId);
+    if (duplicatedNodes.length > 0) {
+      setSelectedNodeIds(duplicatedNodes.map((n) => n.id));
+    }
     recordHistory();
   };
 
@@ -379,6 +438,7 @@ export default function App() {
                   layers: prev.layers.map((l) => (l.id === id ? { ...l, opacity } : l)),
                 }));
               }}
+              onDuplicateLayer={handleDuplicateLayer}
               onDeleteLayer={(id) => {
                 setProject((prev) => ({
                   ...prev,
