@@ -14,8 +14,9 @@ import { RibbonBar } from './components/ribbon/RibbonBar';
 import { ShapeLibrary } from './components/sidebar/ShapeLibrary';
 import { LayerManager } from './components/sidebar/LayerManager';
 import { StickyCommentsPanel } from './components/sidebar/StickyCommentsPanel';
+import { GlobalSearchPanel } from './components/sidebar/GlobalSearchPanel';
 import { PropertiesPanel } from './components/inspector/PropertiesPanel';
-import { WorkflowCanvas } from './components/canvas/WorkflowCanvas';
+import { WorkflowCanvas, FocusTarget } from './components/canvas/WorkflowCanvas';
 import { MiniMap } from './components/canvas/MiniMap';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { AiAssistantModal } from './components/modals/AiAssistantModal';
@@ -24,7 +25,7 @@ import { PluginManagerModal } from './components/modals/PluginManagerModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { DocumentationModal } from './components/modals/DocumentationModal';
 import { applyAutoLayout } from './utils/autolayout';
-import { LayoutGrid, Layers, FolderOpen, MessageSquare } from 'lucide-react';
+import { LayoutGrid, Layers, FolderOpen, MessageSquare, Search } from 'lucide-react';
 
 export default function App() {
   // Current active project
@@ -34,8 +35,9 @@ export default function App() {
   // View state: 'canvas' | 'dashboard'
   const [currentView, setCurrentView] = useState<'canvas' | 'dashboard'>('canvas');
 
-  // Left sidebar tab: 'palette' | 'layers' | 'comments'
-  const [leftSidebarTab, setLeftSidebarTab] = useState<'palette' | 'layers' | 'comments'>('palette');
+  // Left sidebar tab: 'palette' | 'search' | 'layers' | 'comments'
+  const [leftSidebarTab, setLeftSidebarTab] = useState<'palette' | 'search' | 'layers' | 'comments'>('palette');
+  const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
 
   // Canvas Viewport State
   const [zoom, setZoom] = useState(1);
@@ -91,6 +93,12 @@ export default function App() {
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setLeftSidebarTab('search');
+        return;
+      }
+
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
@@ -376,6 +384,17 @@ export default function App() {
               <FolderOpen className="w-5 h-5" />
             </button>
             <button
+              onClick={() => setLeftSidebarTab('search')}
+              className={`p-2 rounded-lg transition-colors ${
+                leftSidebarTab === 'search'
+                  ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="Global Search (⌘F / Ctrl+F)"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button
               onClick={() => setLeftSidebarTab('layers')}
               className={`p-2 rounded-lg transition-colors ${
                 leftSidebarTab === 'layers'
@@ -401,6 +420,22 @@ export default function App() {
 
           {/* Left Sidebar Content */}
           {leftSidebarTab === 'palette' && <ShapeLibrary onAddShape={handleAddShape} />}
+          {leftSidebarTab === 'search' && (
+            <GlobalSearchPanel
+              project={project}
+              onSelectNode={(nodeId) => {
+                setSelectedNodeIds([nodeId]);
+                setSelectedConnectorIds([]);
+              }}
+              onSelectConnector={(connectorId) => {
+                setSelectedConnectorIds([connectorId]);
+                setSelectedNodeIds([]);
+              }}
+              onFocusItem={(target) => {
+                setFocusTarget(target);
+              }}
+            />
+          )}
           {leftSidebarTab === 'layers' && (
             <LayerManager
               layers={project.layers}
@@ -485,6 +520,7 @@ export default function App() {
             setSelectedConnectorIds={setSelectedConnectorIds}
             theme={theme}
             onRecordHistory={recordHistory}
+            focusTarget={focusTarget}
           />
 
           {/* MiniMap Overlay */}

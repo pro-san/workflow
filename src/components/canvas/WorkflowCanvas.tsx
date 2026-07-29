@@ -14,7 +14,16 @@ import {
   getNodeAnchorPos,
   snapValue,
 } from '../../utils/geometry';
+import { AlignmentGuide, computeSmartSnap } from '../../utils/snapping';
 import { StickyCommentNote } from './StickyCommentNote';
+
+export interface FocusTarget {
+  id: string;
+  type: 'node' | 'connector' | 'comment';
+  x?: number;
+  y?: number;
+  timestamp: number;
+}
 
 interface WorkflowCanvasProps {
   project: DiagramProject;
@@ -31,6 +40,7 @@ interface WorkflowCanvasProps {
   setSelectedConnectorIds: React.Dispatch<React.SetStateAction<string[]>>;
   theme: ThemeName;
   onRecordHistory: () => void;
+  focusTarget?: FocusTarget | null;
 }
 
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
@@ -48,9 +58,60 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
   setSelectedConnectorIds,
   theme,
   onRecordHistory,
+  focusTarget,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 100, y: 100 });
+  const [highlightedTarget, setHighlightedTarget] = useState<FocusTarget | null>(null);
+
+  // Focus and Center Effect when a Global Search result is clicked
+  useEffect(() => {
+    if (!focusTarget) return;
+
+    setHighlightedTarget(focusTarget);
+
+    let targetX = focusTarget.x;
+    let targetY = focusTarget.y;
+
+    if (targetX === undefined || targetY === undefined) {
+      if (focusTarget.type === 'node') {
+        const node = project.nodes.find((n) => n.id === focusTarget.id);
+        if (node) {
+          targetX = node.x + node.width / 2;
+          targetY = node.y + node.height / 2;
+        }
+      } else if (focusTarget.type === 'connector') {
+        const conn = project.connectors.find((c) => c.id === focusTarget.id);
+        if (conn) {
+          const sourceNode = project.nodes.find((n) => n.id === conn.fromNodeId);
+          const targetNode = project.nodes.find((n) => n.id === conn.toNodeId);
+          if (sourceNode && targetNode) {
+            targetX = (sourceNode.x + targetNode.x) / 2;
+            targetY = (sourceNode.y + targetNode.y) / 2;
+          }
+        }
+      } else if (focusTarget.type === 'comment') {
+        const comment = (project.comments || []).find((c) => c.id === focusTarget.id);
+        if (comment) {
+          targetX = comment.x + 100;
+          targetY = comment.y + 60;
+        }
+      }
+    }
+
+    if (containerRef.current && targetX !== undefined && targetY !== undefined) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const newPanX = rect.width / 2 - targetX * zoom;
+      const newPanY = rect.height / 2 - targetY * zoom;
+      setPan({ x: newPanX, y: newPanY });
+    }
+
+    const timer = setTimeout(() => {
+      setHighlightedTarget(null);
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [focusTarget, zoom, project.nodes, project.connectors, project.comments]);
 
   // Interaction State
   const [isPanning, setIsPanning] = useState(false);
@@ -58,6 +119,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [activeGuides, setActiveGuides] = useState<AlignmentGuide[]>([]);
 
   // Comment Dragging State
   const [draggingCommentId, setDraggingCommentId] = useState<string | null>(null);
@@ -166,13 +228,57 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     }
 
     if (draggingNodeId) {
-      const newX = snapValue(canvasPt.x - dragOffset.x, 20, snapToGrid);
-      const newY = snapValue(canvasPt.y - dragOffset.y, 20, snapToGrid);
+      const rawX = canvasPt.x - dragOffset.x;
+      const rawY = canvasPt.y - dragOffset.y;
 
-      setProject((prev) => ({
-        ...prev,
-        nodes: prev.nodes.map((n) => (n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n)),
-      }));
+      const dragNode = project.nodes.find((n) => n.id === draggingNodeId);
+      if (dragNode) {
+        const otherNodes = project.nodes.filter(
+          (n) => n.id !== draggingNodeId && !n.hidden
+        );
+
+        let canvasCenter: { x: number; y: number } | undefined;
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          canvasCenter = {
+            x: (rect.width / 2 - pan.x) / zoom,
+            y: (rect.height / 2 - pan.y) / zoom,
+          };
+        }
+
+        let contentCenter: { x: number; y: number } | undefined;
+        if (otherNodes.length > 0) {
+          const minX = Math.min(...otherNodes.map((n) => n.x));
+          const maxX = Math.max(...otherNodes.map((n) => n.x + n.width));
+          const minY = Math.min(...otherNodes.map((n) => n.y));
+          const maxY = Math.max(...otherNodes.map((n) => n.y + n.height));
+          contentCenter = {
+            x: (minX + maxX) / 2,
+            y: (minY + maxY) / 2,
+          };
+        }
+
+        const snapResult = computeSmartSnap({
+          dragNode,
+          rawX,
+          rawY,
+          otherNodes,
+          canvasCenter,
+          contentCenter,
+          snapToGrid,
+          gridSize: 20,
+          snapThreshold: 10 / Math.max(0.5, zoom),
+        });
+
+        setProject((prev) => ({
+          ...prev,
+          nodes: prev.nodes.map((n) =>
+            n.id === draggingNodeId ? { ...n, x: snapResult.x, y: snapResult.y } : n
+          ),
+        }));
+
+        setActiveGuides(snapResult.guides);
+      }
     }
 
     if (draggingCommentId) {
@@ -193,6 +299,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (isPanning) setIsPanning(false);
     if (draggingNodeId) {
       setDraggingNodeId(null);
+      setActiveGuides([]);
       onRecordHistory();
     }
     if (draggingCommentId) {
@@ -574,6 +681,104 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           );
         })}
 
+        {/* Smart Snapping Alignment Guides Layer */}
+        {activeGuides.map((guide) => {
+          const strokeColor = guide.isCanvasCenter ? '#f43f5e' : '#38bdf8';
+          const badgeBg = guide.isCanvasCenter ? '#e11d48' : '#0284c7';
+
+          if (guide.type === 'vertical') {
+            const midY = (guide.start + guide.end) / 2;
+            return (
+              <g key={guide.id} className="pointer-events-none select-none">
+                {/* Guide Dashed Line */}
+                <line
+                  x1={guide.linePosition}
+                  y1={guide.start}
+                  x2={guide.linePosition}
+                  y2={guide.end}
+                  stroke={strokeColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="5,4"
+                />
+                {/* Endpoint Accent Markers */}
+                <circle cx={guide.linePosition} cy={guide.start} r="3.5" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
+                <circle cx={guide.linePosition} cy={guide.end} r="3.5" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
+
+                {/* Alignment Label Badge */}
+                {guide.label && (
+                  <g transform={`translate(${guide.linePosition}, ${midY})`}>
+                    <rect
+                      x="-45"
+                      y="-11"
+                      width="90"
+                      height="22"
+                      rx="11"
+                      fill={badgeBg}
+                      stroke="#ffffff"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x="0"
+                      y="3"
+                      fill="#ffffff"
+                      fontSize="10"
+                      fontWeight="600"
+                      textAnchor="middle"
+                    >
+                      {guide.label}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          } else {
+            const midX = (guide.start + guide.end) / 2;
+            return (
+              <g key={guide.id} className="pointer-events-none select-none">
+                {/* Guide Dashed Line */}
+                <line
+                  x1={guide.start}
+                  y1={guide.linePosition}
+                  x2={guide.end}
+                  y2={guide.linePosition}
+                  stroke={strokeColor}
+                  strokeWidth="1.5"
+                  strokeDasharray="5,4"
+                />
+                {/* Endpoint Accent Markers */}
+                <circle cx={guide.start} cy={guide.linePosition} r="3.5" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
+                <circle cx={guide.end} cy={guide.linePosition} r="3.5" fill={strokeColor} stroke="#ffffff" strokeWidth="1" />
+
+                {/* Alignment Label Badge */}
+                {guide.label && (
+                  <g transform={`translate(${midX}, ${guide.linePosition})`}>
+                    <rect
+                      x="-45"
+                      y="-11"
+                      width="90"
+                      height="22"
+                      rx="11"
+                      fill={badgeBg}
+                      stroke="#ffffff"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x="0"
+                      y="3"
+                      fill="#ffffff"
+                      fontSize="10"
+                      fontWeight="600"
+                      textAnchor="middle"
+                    >
+                      {guide.label}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          }
+        })}
+
         {/* Target Node Connection Lines for Sticky Notes */}
         {(project.comments || []).map((comment) => {
           if (!comment.targetNodeId) return null;
@@ -628,6 +833,71 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
             />
           );
         })}
+
+        {/* Search Result Focus Highlight Pulse */}
+        {highlightedTarget && (() => {
+          let cx = highlightedTarget.x;
+          let cy = highlightedTarget.y;
+
+          if (cx === undefined || cy === undefined) {
+            if (highlightedTarget.type === 'node') {
+              const node = project.nodes.find((n) => n.id === highlightedTarget.id);
+              if (node) {
+                cx = node.x + node.width / 2;
+                cy = node.y + node.height / 2;
+              }
+            } else if (highlightedTarget.type === 'connector') {
+              const conn = project.connectors.find((c) => c.id === highlightedTarget.id);
+              if (conn) {
+                const sourceNode = project.nodes.find((n) => n.id === conn.fromNodeId);
+                const targetNode = project.nodes.find((n) => n.id === conn.toNodeId);
+                if (sourceNode && targetNode) {
+                  cx = (sourceNode.x + targetNode.x) / 2;
+                  cy = (sourceNode.y + targetNode.y) / 2;
+                }
+              }
+            } else if (highlightedTarget.type === 'comment') {
+              const comment = (project.comments || []).find((c) => c.id === highlightedTarget.id);
+              if (comment) {
+                cx = comment.x + 100;
+                cy = comment.y + 60;
+              }
+            }
+          }
+
+          if (cx === undefined || cy === undefined) return null;
+
+          return (
+            <g className="pointer-events-none select-none">
+              <circle
+                cx={cx}
+                cy={cy}
+                r="48"
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth="3"
+                className="animate-ping opacity-75"
+              />
+              <circle
+                cx={cx}
+                cy={cy}
+                r="60"
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth="2"
+                strokeDasharray="6,4"
+              />
+              <circle
+                cx={cx}
+                cy={cy}
+                r="6"
+                fill="#38bdf8"
+                stroke="#ffffff"
+                strokeWidth="2"
+              />
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
