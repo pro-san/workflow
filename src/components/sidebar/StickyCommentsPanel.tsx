@@ -13,6 +13,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  X,
 } from 'lucide-react';
 
 interface StickyCommentsPanelProps {
@@ -47,12 +48,20 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
     if (showOnlyUnresolved && c.resolved) return false;
     if (filter === 'active' && c.resolved) return false;
     if (filter === 'resolved' && !c.resolved) return false;
-    if (
-      searchQuery &&
-      !c.content.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !c.author.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const targetNode = project.nodes.find((n) => n.id === c.targetNodeId);
+      const nodeLabel = targetNode?.label || '';
+
+      const matchesContent = c.content.toLowerCase().includes(q);
+      const matchesAuthor = c.author.toLowerCase().includes(q);
+      const matchesNodeLabel = nodeLabel.toLowerCase().includes(q);
+      const matchesNodeId = c.targetNodeId ? c.targetNodeId.toLowerCase().includes(q) : false;
+
+      if (!matchesContent && !matchesAuthor && !matchesNodeLabel && !matchesNodeId) {
+        return false;
+      }
     }
     return true;
   });
@@ -136,11 +145,20 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
           <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
           <input
             type="text"
-            placeholder="Search feedback..."
+            placeholder="Search content, author, or node..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-md pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+            className="w-full bg-slate-950 border border-slate-800 rounded-md pl-8 pr-7 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-2 text-slate-500 hover:text-slate-300 p-0.5 rounded"
+              title="Clear search"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
 
         {/* Status Filter Tabs */}
