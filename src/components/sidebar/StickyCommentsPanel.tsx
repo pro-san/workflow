@@ -62,10 +62,7 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
   const unresolvedInViewCount = filteredComments.filter((c) => !c.resolved).length;
 
   const handleResolveAll = () => {
-    const displayedIds = new Set(filteredComments.map((c) => c.id));
-    const updated = comments.map((c) =>
-      displayedIds.has(c.id) ? { ...c, resolved: true } : c
-    );
+    const updated = comments.map((c) => ({ ...c, resolved: true }));
     onUpdateComments(updated);
   };
 
@@ -112,12 +109,12 @@ export const StickyCommentsPanel: React.FC<StickyCommentsPanelProps> = ({
         <div className="flex items-center space-x-1.5">
           <button
             onClick={handleResolveAll}
-            disabled={unresolvedInViewCount === 0}
+            disabled={activeCount === 0}
             className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500/10 disabled:cursor-not-allowed px-2 py-1 rounded-md text-[11px] font-medium flex items-center space-x-1 transition-colors shadow-sm"
             title={
-              unresolvedInViewCount > 0
-                ? `Resolve all ${unresolvedInViewCount} currently displayed active notes`
-                : 'No active notes to resolve in view'
+              activeCount > 0
+                ? `Resolve all ${activeCount} active notes`
+                : 'All notes are already resolved'
             }
           >
             <CheckCircle2 className="w-3 h-3 text-emerald-400" />
