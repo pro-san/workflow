@@ -65,6 +65,7 @@ interface RibbonBarProps {
   selectedNodeIds: string[];
   onAlignNodes: (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   onDeleteSelected: () => void;
+  onAddStickyComment?: () => void;
 }
 
 export const RibbonBar: React.FC<RibbonBarProps> = ({
@@ -98,6 +99,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
   selectedNodeIds,
   onAlignNodes,
   onDeleteSelected,
+  onAddStickyComment,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'file' | 'edit' | 'view' | 'insert' | 'arrange' | 'tools' | 'ai' | 'help'
@@ -346,6 +348,21 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
                 <option value="cyberpunk">Cyber Neon</option>
                 <option value="warm_sunset">Warm Sunset</option>
               </select>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'insert' && (
+          <>
+            <div className="flex items-center space-x-2 pr-3 border-r border-slate-800">
+              <button
+                onClick={() => onAddStickyComment && onAddStickyComment()}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40 rounded-lg font-medium transition-colors"
+                title="Add Sticky Note Feedback"
+              >
+                <Plus className="w-4 h-4 text-amber-400" />
+                <span>Sticky Note</span>
+              </button>
             </div>
           </>
         )}

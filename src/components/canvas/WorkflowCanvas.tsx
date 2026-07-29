@@ -5,6 +5,7 @@ import {
   CanvasConnector,
   CanvasNode,
   DiagramProject,
+  StickyComment,
   ThemeName,
 } from '../../types/workflow';
 import {
@@ -13,6 +14,7 @@ import {
   getNodeAnchorPos,
   snapValue,
 } from '../../utils/geometry';
+import { StickyCommentNote } from './StickyCommentNote';
 
 interface WorkflowCanvasProps {
   project: DiagramProject;
@@ -56,6 +58,23 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Comment Dragging State
+  const [draggingCommentId, setDraggingCommentId] = useState<string | null>(null);
+  const [commentDragOffset, setCommentDragOffset] = useState({ x: 0, y: 0 });
+
+  const handleStartCommentDrag = (e: React.MouseEvent, commentId: string) => {
+    e.stopPropagation();
+    const canvasPt = screenToCanvas(e.clientX, e.clientY);
+    const comment = (project.comments || []).find((c) => c.id === commentId);
+    if (comment) {
+      setDraggingCommentId(commentId);
+      setCommentDragOffset({
+        x: canvasPt.x - comment.x,
+        y: canvasPt.y - comment.y,
+      });
+    }
+  };
 
   // Connector drawing
   const [connectingSource, setConnectingSource] = useState<{
@@ -155,6 +174,18 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         nodes: prev.nodes.map((n) => (n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n)),
       }));
     }
+
+    if (draggingCommentId) {
+      const newX = snapValue(canvasPt.x - commentDragOffset.x, 10, snapToGrid);
+      const newY = snapValue(canvasPt.y - commentDragOffset.y, 10, snapToGrid);
+
+      setProject((prev) => ({
+        ...prev,
+        comments: (prev.comments || []).map((c) =>
+          c.id === draggingCommentId ? { ...c, x: newX, y: newY } : c
+        ),
+      }));
+    }
   };
 
   // Canvas Mouse Up
@@ -162,6 +193,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
     if (isPanning) setIsPanning(false);
     if (draggingNodeId) {
       setDraggingNodeId(null);
+      onRecordHistory();
+    }
+    if (draggingCommentId) {
+      setDraggingCommentId(null);
       onRecordHistory();
     }
     if (connectingSource) setConnectingSource(null);
@@ -500,6 +535,61 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                 </>
               )}
             </g>
+          );
+        })}
+
+        {/* Target Node Connection Lines for Sticky Notes */}
+        {(project.comments || []).map((comment) => {
+          if (!comment.targetNodeId) return null;
+          const targetNode = project.nodes.find((n) => n.id === comment.targetNodeId);
+          if (!targetNode) return null;
+
+          const commentCenterX = comment.x + (comment.width || 180) / 2;
+          const commentCenterY = comment.y + (comment.height || 130) / 2;
+          const nodeCenterX = targetNode.x + targetNode.width / 2;
+          const nodeCenterY = targetNode.y + targetNode.height / 2;
+
+          return (
+            <line
+              key={`comment_link_${comment.id}`}
+              x1={commentCenterX}
+              y1={commentCenterY}
+              x2={nodeCenterX}
+              y2={nodeCenterY}
+              stroke={comment.color || '#fef08a'}
+              strokeWidth="2"
+              strokeDasharray="4 4"
+              opacity="0.8"
+              className="pointer-events-none"
+            />
+          );
+        })}
+
+        {/* Sticky Notes Render Layer */}
+        {(project.comments || []).map((comment) => {
+          const targetNode = project.nodes.find((n) => n.id === comment.targetNodeId);
+          return (
+            <StickyCommentNote
+              key={comment.id}
+              comment={comment}
+              targetNodeLabel={targetNode?.label}
+              zoom={zoom}
+              onUpdate={(updated) => {
+                setProject((prev) => ({
+                  ...prev,
+                  comments: (prev.comments || []).map((c) => (c.id === updated.id ? updated : c)),
+                }));
+                onRecordHistory();
+              }}
+              onDelete={(id) => {
+                setProject((prev) => ({
+                  ...prev,
+                  comments: (prev.comments || []).filter((c) => c.id !== id),
+                }));
+                onRecordHistory();
+              }}
+              onStartDrag={handleStartCommentDrag}
+            />
           );
         })}
       </svg>

@@ -129,6 +129,21 @@ export interface CanvasLayer {
   opacity: number;
 }
 
+export interface StickyComment {
+  id: string;
+  author: string;
+  authorAvatar?: string;
+  content: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  targetNodeId?: string;
+  resolved: boolean;
+  createdAt: string;
+}
+
 export interface DiagramProject {
   id: string;
   title: string;
@@ -137,6 +152,7 @@ export interface DiagramProject {
   nodes: CanvasNode[];
   connectors: CanvasConnector[];
   layers: CanvasLayer[];
+  comments?: StickyComment[];
   createdAt: string;
   updatedAt: string;
   tags: string[];

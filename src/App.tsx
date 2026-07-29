@@ -5,12 +5,14 @@ import {
   CanvasLayer,
   CanvasNode,
   DiagramProject,
+  StickyComment,
   ThemeName,
 } from './types/workflow';
 import { PREBUILT_TEMPLATES } from './data/templates';
 import { RibbonBar } from './components/ribbon/RibbonBar';
 import { ShapeLibrary } from './components/sidebar/ShapeLibrary';
 import { LayerManager } from './components/sidebar/LayerManager';
+import { StickyCommentsPanel } from './components/sidebar/StickyCommentsPanel';
 import { PropertiesPanel } from './components/inspector/PropertiesPanel';
 import { WorkflowCanvas } from './components/canvas/WorkflowCanvas';
 import { MiniMap } from './components/canvas/MiniMap';
@@ -21,7 +23,7 @@ import { PluginManagerModal } from './components/modals/PluginManagerModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { DocumentationModal } from './components/modals/DocumentationModal';
 import { applyAutoLayout } from './utils/autolayout';
-import { LayoutGrid, Layers, FolderOpen } from 'lucide-react';
+import { LayoutGrid, Layers, FolderOpen, MessageSquare } from 'lucide-react';
 
 export default function App() {
   // Current active project
@@ -31,8 +33,8 @@ export default function App() {
   // View state: 'canvas' | 'dashboard'
   const [currentView, setCurrentView] = useState<'canvas' | 'dashboard'>('canvas');
 
-  // Left sidebar tab: 'palette' | 'layers'
-  const [leftSidebarTab, setLeftSidebarTab] = useState<'palette' | 'layers'>('palette');
+  // Left sidebar tab: 'palette' | 'layers' | 'comments'
+  const [leftSidebarTab, setLeftSidebarTab] = useState<'palette' | 'layers' | 'comments'>('palette');
 
   // Canvas Viewport State
   const [zoom, setZoom] = useState(1);
@@ -188,6 +190,32 @@ export default function App() {
     recordHistory();
   };
 
+  // Handle Add Sticky Comment
+  const handleAddStickyComment = (targetNodeId?: string) => {
+    const targetNode = targetNodeId ? project.nodes.find((n) => n.id === targetNodeId) : undefined;
+    const newComment: StickyComment = {
+      id: `comment_${Date.now()}`,
+      author: 'Current User',
+      authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      content: 'New feedback note...',
+      color: '#fef08a',
+      x: targetNode ? targetNode.x + targetNode.width + 30 : 250,
+      y: targetNode ? targetNode.y : 200,
+      width: 180,
+      height: 140,
+      targetNodeId: targetNodeId,
+      resolved: false,
+      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setProject((prev) => ({
+      ...prev,
+      comments: [...(prev.comments || []), newComment],
+    }));
+    setLeftSidebarTab('comments');
+    recordHistory();
+  };
+
   // New Blank Diagram
   const handleNewDiagram = () => {
     const newPrj: DiagramProject = {
@@ -246,6 +274,7 @@ export default function App() {
         selectedNodeIds={selectedNodeIds}
         onAlignNodes={handleAlignNodes}
         onDeleteSelected={handleDeleteSelected}
+        onAddStickyComment={handleAddStickyComment}
       />
 
       {/* Main Container Layout */}
@@ -297,6 +326,17 @@ export default function App() {
             >
               <Layers className="w-5 h-5" />
             </button>
+            <button
+              onClick={() => setLeftSidebarTab('comments')}
+              className={`p-2 rounded-lg transition-colors ${
+                leftSidebarTab === 'comments'
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title="Sticky Notes & Feedback"
+            >
+              <MessageSquare className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Left Sidebar Content */}
@@ -333,6 +373,19 @@ export default function App() {
                   ...prev,
                   layers: prev.layers.filter((l) => l.id !== id),
                 }));
+              }}
+            />
+          )}
+          {leftSidebarTab === 'comments' && (
+            <StickyCommentsPanel
+              project={project}
+              onUpdateComments={(updatedComments) => {
+                setProject((prev) => ({ ...prev, comments: updatedComments }));
+                recordHistory();
+              }}
+              onAddStickyComment={handleAddStickyComment}
+              onSelectNode={(nodeId) => {
+                setSelectedNodeIds([nodeId]);
               }}
             />
           )}

@@ -27,6 +27,36 @@ export const PREBUILT_TEMPLATES: DiagramProject[] = [
     layers: [
       { id: 'layer_default', name: 'Default Layer', visible: true, locked: false, opacity: 1 },
     ],
+    comments: [
+      {
+        id: 'comment_1',
+        author: 'Sarah Jenkins (Lead Architect)',
+        authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+        content: 'Please double-check the Gateway timeout logic here before production release.',
+        color: '#fef08a',
+        x: 480,
+        y: 80,
+        width: 190,
+        height: 120,
+        targetNodeId: 'node_3',
+        resolved: false,
+        createdAt: '10:42 AM',
+      },
+      {
+        id: 'comment_2',
+        author: 'Alex Rivera (DevOps)',
+        authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+        content: 'Payment gateway API v2 migration completed and verified.',
+        color: '#bbf7d0',
+        x: 280,
+        y: 350,
+        width: 180,
+        height: 110,
+        targetNodeId: 'node_2',
+        resolved: true,
+        createdAt: '09:15 AM',
+      },
+    ],
     nodes: [
       {
         id: 'node_1',
