@@ -438,6 +438,13 @@ export default function App() {
                   layers: prev.layers.map((l) => (l.id === id ? { ...l, opacity } : l)),
                 }));
               }}
+              onUpdateColor={(id, color) => {
+                setProject((prev) => ({
+                  ...prev,
+                  layers: prev.layers.map((l) => (l.id === id ? { ...l, color } : l)),
+                }));
+                recordHistory();
+              }}
               onDuplicateLayer={handleDuplicateLayer}
               onDeleteLayer={(id) => {
                 setProject((prev) => ({

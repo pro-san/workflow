@@ -127,6 +127,7 @@ export interface CanvasLayer {
   visible: boolean;
   locked: boolean;
   opacity: number;
+  color?: string;
 }
 
 export interface StickyCommentReply {

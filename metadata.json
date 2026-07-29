@@ -1,6 +1,6 @@
 {
-  "name": "Workflow Designer Enterprise",
-  "description": "Enterprise Workflow, BPMN, Flowchart & Diagram Designer with AI Assistant, Auto Layout, and Multi-Format Export",
+  "name": "PRO WORKFLOW",
+  "description": "PRO WORKFLOW - Enterprise BPMN, Flowchart & Diagram Designer with AI Assistant, Auto Layout, and Multi-Format Export",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

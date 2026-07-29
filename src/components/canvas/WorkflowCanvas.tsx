@@ -433,6 +433,14 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           const isSelected = selectedNodeIds.includes(node.id);
           const isHovered = hoveredNodeId === node.id;
 
+          const layerColor = nodeLayer?.color;
+          const effectiveStroke = isSelected ? '#38bdf8' : (layerColor || node.stroke);
+          const effectiveStrokeWidth = isSelected
+            ? node.strokeWidth + 2
+            : layerColor
+            ? Math.max(node.strokeWidth, 2.5)
+            : node.strokeWidth;
+
           return (
             <g
               key={node.id}
@@ -461,22 +469,22 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   cy={node.height / 2}
                   r={Math.min(node.width, node.height) / 2}
                   fill={node.fill}
-                  stroke={isSelected ? '#38bdf8' : node.stroke}
-                  strokeWidth={isSelected ? node.strokeWidth + 2 : node.strokeWidth}
+                  stroke={effectiveStroke}
+                  strokeWidth={effectiveStrokeWidth}
                 />
               ) : node.type === 'diamond' || node.type === 'decision' || node.type === 'gateway_exclusive' ? (
                 <polygon
                   points={`${node.width / 2},0 ${node.width},${node.height / 2} ${node.width / 2},${node.height} 0,${node.height / 2}`}
                   fill={node.fill}
-                  stroke={isSelected ? '#38bdf8' : node.stroke}
-                  strokeWidth={isSelected ? node.strokeWidth + 2 : node.strokeWidth}
+                  stroke={effectiveStroke}
+                  strokeWidth={effectiveStrokeWidth}
                 />
               ) : node.type === 'triangle' ? (
                 <polygon
                   points={`${node.width / 2},0 ${node.width},${node.height} 0,${node.height}`}
                   fill={node.fill}
-                  stroke={isSelected ? '#38bdf8' : node.stroke}
-                  strokeWidth={isSelected ? node.strokeWidth + 2 : node.strokeWidth}
+                  stroke={effectiveStroke}
+                  strokeWidth={effectiveStrokeWidth}
                 />
               ) : (
                 <rect
@@ -484,8 +492,21 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
                   height={node.height}
                   rx={node.type === 'rounded_rectangle' || node.type === 'user_task' || node.type === 'service_task' ? 12 : node.cornerRadius || 6}
                   fill={node.fill}
-                  stroke={isSelected ? '#38bdf8' : node.stroke}
-                  strokeWidth={isSelected ? node.strokeWidth + 2 : node.strokeWidth}
+                  stroke={effectiveStroke}
+                  strokeWidth={effectiveStrokeWidth}
+                />
+              )}
+
+              {/* Layer Color Badge Indicator */}
+              {layerColor && (
+                <circle
+                  cx={6}
+                  cy={6}
+                  r={3.5}
+                  fill={layerColor}
+                  stroke="#0f172a"
+                  strokeWidth="1"
+                  className="pointer-events-none"
                 />
               )}
 

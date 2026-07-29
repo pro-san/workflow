@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Layers, Sliders, Copy } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Layers, Sliders, Copy, Palette } from 'lucide-react';
 import { CanvasLayer } from '../../types/workflow';
 
 interface LayerManagerProps {
@@ -10,9 +10,21 @@ interface LayerManagerProps {
   onToggleVisibility: (id: string) => void;
   onToggleLock: (id: string) => void;
   onUpdateOpacity: (id: string, opacity: number) => void;
+  onUpdateColor: (id: string, color: string) => void;
   onDuplicateLayer: (id: string) => void;
   onDeleteLayer: (id: string) => void;
 }
+
+const LAYER_COLOR_PRESETS = [
+  '#6366f1', // Indigo
+  '#10b981', // Emerald
+  '#f59e0b', // Amber
+  '#f43f5e', // Rose
+  '#a855f7', // Purple
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#64748b', // Slate
+];
 
 export const LayerManager: React.FC<LayerManagerProps> = ({
   layers,
@@ -22,6 +34,7 @@ export const LayerManager: React.FC<LayerManagerProps> = ({
   onToggleVisibility,
   onToggleLock,
   onUpdateOpacity,
+  onUpdateColor,
   onDuplicateLayer,
   onDeleteLayer,
 }) => {
@@ -44,16 +57,18 @@ export const LayerManager: React.FC<LayerManagerProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {layers.map((layer) => {
+        {layers.map((layer, index) => {
           const isActive = layer.id === activeLayerId;
           const currentOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
           const opacityPercent = Math.round(currentOpacity * 100);
+          const layerColor = layer.color || LAYER_COLOR_PRESETS[index % LAYER_COLOR_PRESETS.length];
 
           return (
             <div
               key={layer.id}
               onClick={() => setActiveLayerId(layer.id)}
-              className={`p-2.5 rounded-lg border transition-all cursor-pointer text-xs space-y-2 ${
+              style={{ borderLeftColor: layerColor, borderLeftWidth: '4px' }}
+              className={`p-2.5 rounded-lg border border-l-4 transition-all cursor-pointer text-xs space-y-2 ${
                 isActive
                   ? 'bg-indigo-600/15 border-indigo-500/50 text-indigo-200 shadow-sm'
                   : 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/80 text-slate-300'
@@ -111,9 +126,45 @@ export const LayerManager: React.FC<LayerManagerProps> = ({
                 </div>
               </div>
 
+              {/* Layer Border Color Picker */}
+              <div
+                className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center space-x-1 text-slate-400">
+                  <Palette className="w-3 h-3 text-indigo-400/80" />
+                  <span className="text-[10px] font-medium">Border Color</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  {LAYER_COLOR_PRESETS.slice(0, 5).map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => onUpdateColor(layer.id, color)}
+                      className={`w-3.5 h-3.5 rounded-full border transition-transform hover:scale-125 ${
+                        layerColor === color ? 'border-white ring-1 ring-indigo-400 scale-110' : 'border-transparent opacity-80 hover:opacity-100'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title={`Set layer color to ${color}`}
+                    />
+                  ))}
+                  <label
+                    className="relative cursor-pointer w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center overflow-hidden hover:border-slate-400 ml-1"
+                    style={{ backgroundColor: layerColor }}
+                    title="Custom Color Picker"
+                  >
+                    <input
+                      type="color"
+                      value={layerColor}
+                      onChange={(e) => onUpdateColor(layer.id, e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </label>
+                </div>
+              </div>
+
               {/* Opacity Control Slider */}
               <div
-                className="pt-2 border-t border-slate-800/80 flex items-center space-x-2 text-[11px]"
+                className="pt-1.5 flex items-center space-x-2 text-[11px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center space-x-1 text-slate-400 w-16 flex-shrink-0">

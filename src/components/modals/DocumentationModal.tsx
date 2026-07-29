@@ -21,7 +21,7 @@ export const DocumentationModal: React.FC<DocumentationModalProps> = ({ isOpen, 
               <HelpCircle className="w-4 h-4 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">Workflow Designer Documentation</h2>
+              <h2 className="text-sm font-semibold text-white">PRO WORKFLOW Documentation</h2>
               <p className="text-[11px] text-slate-400">Enterprise user manual, hotkeys, and system info</p>
             </div>
           </div>
