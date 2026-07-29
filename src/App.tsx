@@ -25,6 +25,7 @@ import { PluginManagerModal } from './components/modals/PluginManagerModal';
 import { ExportModal } from './components/modals/ExportModal';
 import { DocumentationModal } from './components/modals/DocumentationModal';
 import { applyAutoLayout } from './utils/autolayout';
+import { NodeStyleTemplate } from './utils/templateStorage';
 import { LayoutGrid, Layers, FolderOpen, MessageSquare, Search } from 'lucide-react';
 
 export default function App() {
@@ -151,6 +152,75 @@ export default function App() {
 
     setProject((prev) => ({ ...prev, nodes: [...prev.nodes, newNode] }));
     setSelectedNodeIds([newNode.id]);
+    recordHistory();
+  };
+
+  // Handle Add Node with Custom Template
+  const handleAddNodeWithTemplate = (template: NodeStyleTemplate) => {
+    const newNode: CanvasNode = {
+      id: `node_${Date.now()}`,
+      type: template.shapeType,
+      category: template.category,
+      label: template.name.toUpperCase(),
+      x: 320 + Math.random() * 40,
+      y: 220 + Math.random() * 40,
+      width: template.width,
+      height: template.height,
+      rotation: 0,
+      fill: template.fill,
+      fillType: template.fillType,
+      gradientColor: template.gradientColor,
+      stroke: template.stroke,
+      strokeWidth: template.strokeWidth,
+      strokeStyle: template.strokeStyle,
+      cornerRadius: template.cornerRadius,
+      opacity: template.opacity,
+      shadow: template.shadow,
+      glow: template.glow,
+      fontFamily: template.fontFamily,
+      fontSize: template.fontSize,
+      fontWeight: template.fontWeight,
+      textColor: template.textColor,
+      textAlign: template.textAlign,
+      layerId: activeLayerId || project.layers[0]?.id || 'layer_default',
+      locked: false,
+      hidden: false,
+    };
+
+    setProject((prev) => ({ ...prev, nodes: [...prev.nodes, newNode] }));
+    setSelectedNodeIds([newNode.id]);
+    recordHistory();
+  };
+
+  // Handle Apply Template Style to Selected Nodes
+  const handleApplyTemplateToSelected = (template: NodeStyleTemplate) => {
+    if (selectedNodeIds.length === 0) return;
+    setProject((prev) => ({
+      ...prev,
+      nodes: prev.nodes.map((node) => {
+        if (selectedNodeIds.includes(node.id)) {
+          return {
+            ...node,
+            fill: template.fill,
+            fillType: template.fillType,
+            gradientColor: template.gradientColor,
+            stroke: template.stroke,
+            strokeWidth: template.strokeWidth,
+            strokeStyle: template.strokeStyle,
+            cornerRadius: template.cornerRadius,
+            opacity: template.opacity,
+            shadow: template.shadow,
+            glow: template.glow,
+            fontFamily: template.fontFamily,
+            fontSize: template.fontSize,
+            fontWeight: template.fontWeight,
+            textColor: template.textColor,
+            textAlign: template.textAlign,
+          };
+        }
+        return node;
+      }),
+    }));
     recordHistory();
   };
 
@@ -419,7 +489,14 @@ export default function App() {
           </div>
 
           {/* Left Sidebar Content */}
-          {leftSidebarTab === 'palette' && <ShapeLibrary onAddShape={handleAddShape} />}
+          {leftSidebarTab === 'palette' && (
+            <ShapeLibrary
+              onAddShape={handleAddShape}
+              selectedNodes={project.nodes.filter((n) => selectedNodeIds.includes(n.id))}
+              onAddNodeWithTemplate={handleAddNodeWithTemplate}
+              onApplyTemplateToSelected={handleApplyTemplateToSelected}
+            />
+          )}
           {leftSidebarTab === 'search' && (
             <GlobalSearchPanel
               project={project}
