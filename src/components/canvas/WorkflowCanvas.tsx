@@ -354,6 +354,10 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           const toNode = project.nodes.find((n) => n.id === conn.toNodeId);
           if (!fromNode || !toNode) return null;
 
+          const fromLayer = project.layers.find((l) => l.id === fromNode.layerId) || project.layers[0];
+          if (fromLayer && !fromLayer.visible) return null;
+
+          const connLayerOpacity = fromLayer && typeof fromLayer.opacity === 'number' ? fromLayer.opacity : 1;
           const startPt = getNodeAnchorPos(fromNode, conn.fromAnchor);
           const endPt = getNodeAnchorPos(toNode, conn.toAnchor);
           const pathD = generateConnectorPath(startPt, endPt, conn.fromAnchor, conn.toAnchor, conn.lineStyle);
@@ -361,7 +365,11 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
           const isSelected = selectedConnectorIds.includes(conn.id);
 
           return (
-            <g key={conn.id} onClick={(e) => { e.stopPropagation(); setSelectedConnectorIds([conn.id]); setSelectedNodeIds([]); }}>
+            <g
+              key={conn.id}
+              opacity={connLayerOpacity}
+              onClick={(e) => { e.stopPropagation(); setSelectedConnectorIds([conn.id]); setSelectedNodeIds([]); }}
+            >
               <path
                 d={pathD}
                 fill="none"
@@ -415,13 +423,20 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
 
         {/* Nodes Layer */}
         {project.nodes.map((node) => {
-          if (node.hidden) return null;
+          const nodeLayer = project.layers.find((l) => l.id === node.layerId) || project.layers[0];
+          if (node.hidden || (nodeLayer && !nodeLayer.visible)) return null;
+
+          const layerOpacity = nodeLayer && typeof nodeLayer.opacity === 'number' ? nodeLayer.opacity : 1;
+          const nodeOpacity = typeof node.opacity === 'number' ? node.opacity : 1;
+          const effectiveOpacity = layerOpacity * nodeOpacity;
+
           const isSelected = selectedNodeIds.includes(node.id);
           const isHovered = hoveredNodeId === node.id;
 
           return (
             <g
               key={node.id}
+              opacity={effectiveOpacity}
               transform={`translate(${node.x}, ${node.y}) rotate(${node.rotation}, ${node.width / 2}, ${node.height / 2})`}
               onMouseEnter={() => setHoveredNodeId(node.id)}
               onMouseLeave={() => setHoveredNodeId(null)}

@@ -45,9 +45,10 @@ export default function App() {
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [theme, setTheme] = useState<ThemeName>('dark_studio');
 
-  // Selection
+  // Selection & Layer State
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [selectedConnectorIds, setSelectedConnectorIds] = useState<string[]>([]);
+  const [activeLayerId, setActiveLayerId] = useState<string>('layer_1');
 
   // History Undo / Redo Stack
   const [history, setHistory] = useState<DiagramProject[]>([PREBUILT_TEMPLATES[0]]);
@@ -344,8 +345,8 @@ export default function App() {
           {leftSidebarTab === 'layers' && (
             <LayerManager
               layers={project.layers}
-              activeLayerId={project.layers[0]?.id || 'layer_1'}
-              setActiveLayerId={() => {}}
+              activeLayerId={activeLayerId || project.layers[0]?.id || 'layer_1'}
+              setActiveLayerId={setActiveLayerId}
               onAddLayer={() => {
                 const newLayer: CanvasLayer = {
                   id: `layer_${Date.now()}`,
@@ -355,17 +356,27 @@ export default function App() {
                   opacity: 1,
                 };
                 setProject((prev) => ({ ...prev, layers: [...prev.layers, newLayer] }));
+                setActiveLayerId(newLayer.id);
+                recordHistory();
               }}
               onToggleVisibility={(id) => {
                 setProject((prev) => ({
                   ...prev,
                   layers: prev.layers.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
                 }));
+                recordHistory();
               }}
               onToggleLock={(id) => {
                 setProject((prev) => ({
                   ...prev,
                   layers: prev.layers.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
+                }));
+                recordHistory();
+              }}
+              onUpdateOpacity={(id, opacity) => {
+                setProject((prev) => ({
+                  ...prev,
+                  layers: prev.layers.map((l) => (l.id === id ? { ...l, opacity } : l)),
                 }));
               }}
               onDeleteLayer={(id) => {
@@ -373,6 +384,7 @@ export default function App() {
                   ...prev,
                   layers: prev.layers.filter((l) => l.id !== id),
                 }));
+                recordHistory();
               }}
             />
           )}
